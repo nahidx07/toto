@@ -8,7 +8,7 @@
     
     <!-- Telegram WebApp SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <!-- Firebase SDK (v8) -->
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
@@ -38,9 +38,14 @@
         .video-wrapper { width: 100%; aspect-ratio: 16/9; background: #000; }
         
         .chat-container { flex: 1; display: flex; flex-direction: column; background: var(--chat-bg); overflow: hidden; }
-        #chat-messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
-        .chat-msg { background: rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 10px; }
-        .chat-msg b { color: var(--primary-red); margin-right: 5px; }
+        #chat-messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+        
+        /* চ্যাট মেসেজ স্টাইল (প্রোফাইল পিকচার সহ) */
+        .chat-msg { display: flex; gap: 10px; align-items: flex-start; }
+        .chat-avatar { width: 35px; height: 35px; border-radius: 50%; border: 1px solid var(--primary-red); }
+        .chat-text { background: rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 12px; font-size: 14px; flex: 1; }
+        .chat-text b { color: var(--primary-yellow); font-size: 12px; display: block; margin-bottom: 2px; }
+
         .chat-input-box { display: flex; padding: 10px; background: #121418; gap: 10px; border-top: 1px solid var(--border-color); }
         .chat-input-box input { flex: 1; background: var(--input-bg); border: none; padding: 12px; border-radius: 10px; color: #fff; outline: none; }
         .chat-send-btn { background: var(--primary-red); border: none; color: #fff; padding: 0 15px; border-radius: 10px; font-weight: bold; }
@@ -57,27 +62,31 @@
         <div class="xp-badge-top">⚡ <span id="xp-display">0</span> XP</div>
     </header>
 
+    <!-- হোম পেজ -->
     <div id="home" class="page-content active">
         <h3 style="margin-bottom: 15px;">সরাসরি সম্প্রচার</h3>
-        <div id="matches-container"></div>
+        <div id="matches-container">লোড হচ্ছে...</div>
     </div>
 
+    <!-- লিডারবোর্ড -->
     <div id="top" class="page-content">
         <h3 style="margin-bottom: 15px;">লিডারবোর্ড</h3>
         <div id="leaderboard-data"></div>
     </div>
 
+    <!-- প্রোফাইল পেজ -->
     <div id="profile" class="page-content">
         <div style="background: #161B22; border-radius: 20px; padding: 30px; text-align: center; border: 1px solid var(--border-color);">
-            <img id="p-pic" src="" style="width: 100px; height: 100px; border-radius: 50%; border: 3px solid var(--primary-red);">
-            <h2 id="p-name" style="margin-top: 15px;">লোড হচ্ছে...</h2>
+            <img id="p-pic" src="" style="width: 100px; height: 100px; border-radius: 50%; border: 3px solid var(--primary-red); object-fit: cover;">
+            <h2 id="p-name" style="margin-top: 15px;">-</h2>
             <p id="p-id" style="color: gray; font-size: 12px; margin-top: 5px;"></p>
-            <div style="margin-top: 20px; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 12px; text-align: left;">
-                <span style="font-size: 12px; color: #8B949E;">টেলিগ্রাম থেকে অটো-লগইন সম্পন্ন হয়েছে।</span>
+            <div style="margin-top: 20px; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 12px; text-align: center;">
+                <span style="font-size: 12px; color: #4CAF50;">টেলিগ্রাম বটের মাধ্যমে অটো-লগইন সম্পন্ন হয়েছে</span>
             </div>
         </div>
     </div>
 
+    <!-- লাইভ ভিউ স্ক্রিন -->
     <div id="live-view">
         <div class="live-header">
             <span onclick="closeLive()" style="cursor:pointer; font-weight:bold;">✕ বন্ধ করুন</span>
@@ -87,12 +96,13 @@
         <div class="chat-container">
             <div id="chat-messages"></div>
             <div class="chat-input-box">
-                <input type="text" id="chat-input" placeholder="কমেন্ট করুন...">
+                <input type="text" id="chat-input" placeholder="মতামত লিখুন...">
                 <button class="chat-send-btn" onclick="sendChat()">পাঠান</button>
             </div>
         </div>
     </div>
 
+    <!-- নেভিগেশন -->
     <nav class="nav-island">
         <div class="nav-btn active" onclick="showPage('home', this)"><span>🏠 হোম</span></div>
         <div class="nav-btn" onclick="showPage('top', this)"><span>🏆 লিডারবোর্ড</span></div>
@@ -112,16 +122,17 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // টেলিগ্রাম ইউজার ডাটা
+        // টেলিগ্রাম SDK থেকে ইউজার ডাটা নেওয়া
         const tg = window.Telegram.WebApp;
         tg.expand();
         const tgUser = tg.initDataUnsafe.user;
 
-        let myId = tgUser ? tgUser.id : "guest_user";
-        let myName = tgUser ? (tgUser.first_name + (tgUser.last_name ? " " + tgUser.last_name : "")) : "Unknown";
-        let myPic = tgUser ? tgUser.photo_url : "https://www.w3schools.com/howto/img_avatar.png";
+        // ডিফল্ট ডাটা যদি টেলিগ্রাম থেকে না পাওয়া যায় (ব্রাউজারে টেস্টের জন্য)
+        let myId = tgUser ? tgUser.id : "guest_123";
+        let myName = tgUser ? (tgUser.first_name + (tgUser.last_name ? " " + tgUser.last_name : "")) : "Guest User";
+        let myPic = tgUser && tgUser.photo_url ? tgUser.photo_url : "https://www.w3schools.com/howto/img_avatar.png";
 
-        // অটো লগইন ও ডাটাবেস সিঙ্ক
+        // ১. অটোমেটিক একাউন্ট ক্রিয়েশন/আপডেট
         db.ref('users/' + myId).once('value', snap => {
             if(!snap.val()) {
                 db.ref('users/' + myId).set({ name: myName, profilePic: myPic, xp: 500, id: myId });
@@ -130,18 +141,19 @@
             }
         });
 
-        // ইউজার ডাটা দেখানো
+        // প্রোফাইল সিঙ্ক
         db.ref('users/' + myId).on('value', s => {
             const u = s.val(); if(!u) return;
             document.getElementById('p-name').innerText = u.name;
             document.getElementById('p-pic').src = u.profilePic;
-            document.getElementById('p-id').innerText = "ID: " + myId;
+            document.getElementById('p-id').innerText = "TG ID: " + myId;
             document.getElementById('xp-display').innerText = (u.xp || 0).toLocaleString();
         });
 
-        // লাইভ ম্যাচ লিস্ট (ওয়াচিং কাউন্টসহ)
+        // ২. লাইভ ম্যাচ লিস্ট ও রিয়েল টাইম ওয়াচিং
         db.ref('matches').on('value', snap => {
             const matches = snap.val(); const cont = document.getElementById('matches-container'); cont.innerHTML = '';
+            if(!matches) { cont.innerHTML = "বর্তমানে কোনো ম্যাচ নেই।"; return; }
             for(let id in matches) {
                 const m = matches[id];
                 cont.innerHTML += `<div class="match-card" onclick="openLive('${id}', '${m.videoUrl}')">
@@ -159,27 +171,47 @@
             document.getElementById('live-view').style.display = 'flex';
             document.getElementById('video-container').innerHTML = `<iframe width="100%" height="100%" src="${url}" frameborder="0" allowfullscreen></iframe>`;
             
-            // রিয়েল টাইম ওয়াচিং কাউন্ট লজিক
+            // ওয়াচিং কাউন্ট বাড়ানো (Transaction ব্যবহার করে)
             db.ref('matches/' + matchId + '/watching').transaction(curr => (curr || 0) + 1);
             db.ref('matches/' + matchId + '/watching').onDisconnect().transaction(curr => (curr || 0) - 1);
             db.ref('matches/' + matchId + '/watching').on('value', s => document.getElementById('watch-count').innerText = s.val() || 0);
 
-            // রিয়েল টাইম চ্যাট
-            db.ref('matches/' + matchId + '/chats').limitToLast(20).on('value', snap => {
+            // চ্যাট লোড করা
+            loadChats(matchId);
+        }
+
+        function loadChats(mid) {
+            db.ref('matches/' + mid + '/chats').limitToLast(25).on('value', snap => {
                 const chats = snap.val(); const box = document.getElementById('chat-messages'); box.innerHTML = '';
-                for(let id in chats) box.innerHTML += `<div class="chat-msg"><b>${chats[id].user}:</b> ${chats[id].msg}</div>`;
+                for(let id in chats) {
+                    const c = chats[id];
+                    box.innerHTML += `
+                        <div class="chat-msg">
+                            <img src="${c.pic}" class="chat-avatar">
+                            <div class="chat-text"><b>${c.name}</b>${c.msg}</div>
+                        </div>`;
+                }
                 box.scrollTop = box.scrollHeight;
             });
         }
 
         function sendChat() {
-            const msg = document.getElementById('chat-input').value; if(!msg || !currentMatchId) return;
-            db.ref('matches/' + currentMatchId + '/chats').push({ user: myName, msg: msg });
-            document.getElementById('chat-input').value = '';
+            const input = document.getElementById('chat-input');
+            if(!input.value || !currentMatchId) return;
+            db.ref('matches/' + currentMatchId + '/chats').push({
+                name: myName,
+                pic: myPic,
+                msg: input.value,
+                time: Date.now()
+            });
+            input.value = '';
         }
 
         function closeLive() {
-            if(currentMatchId) db.ref('matches/' + currentMatchId + '/watching').transaction(curr => (curr || 0) - 1);
+            if(currentMatchId) {
+                db.ref('matches/' + currentMatchId + '/watching').transaction(curr => (curr || 0) - 1);
+                db.ref('matches/' + currentMatchId + '/chats').off();
+            }
             document.getElementById('live-view').style.display = 'none';
             document.getElementById('video-container').innerHTML = '';
             currentMatchId = null;
@@ -194,13 +226,13 @@
 
         db.ref('settings/logoUrl').on('value', s => document.getElementById('app-logo').src = s.val());
 
-        // লিডারবোর্ড ডাটা
+        // লিডারবোর্ড
         db.ref('users').orderByChild('xp').limitToLast(10).on('value', snap => {
             const users = snap.val(); const lb = document.getElementById('leaderboard-data'); lb.innerHTML = '';
             let arr = []; for(let id in users) arr.push(users[id]);
             arr.sort((a,b)=>b.xp - a.xp).forEach((u, i) => {
-                lb.innerHTML += `<div style="display:flex;justify-content:space-between;background:#161B22;padding:12px;margin-bottom:8px;border-radius:12px;border:1px solid rgba(255,255,255,0.05)">
-                    <span>#${i+1} ${u.name}</span><span style="color:orange">${u.xp} XP</span>
+                lb.innerHTML += `<div style="display:flex;justify-content:space-between;background:#161B22;padding:12px;margin-bottom:8px;border-radius:12px;border:1px solid var(--border-color)">
+                    <span>#${i+1} ${u.name}</span><span style="color:var(--primary-yellow)">${u.xp} XP</span>
                 </div>`;
             });
         });
