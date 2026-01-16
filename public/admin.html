@@ -9,41 +9,36 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
-        :root { --bg-color: #05070A; --drawer-bg: #0D1117; --card-bg: #161B22; --primary-red: #E21E26; --primary-yellow: #FFC107; --border-color: rgba(255,255,255,0.08); }
+        :root { --bg-color: #05070A; --card-bg: #161B22; --primary-red: #E21E26; --border-color: rgba(255,255,255,0.08); }
         body { background: var(--bg-color); color: #fff; font-family: 'Hind Siliguri', sans-serif; padding: 20px; }
-        .card { background: var(--card-bg); padding: 25px; border-radius: 15px; border: 1px solid var(--border-color); margin-bottom: 20px; }
-        input { width: 100%; padding: 12px; background: #000; border: 1px solid var(--border-color); color: #fff; border-radius: 8px; margin-bottom: 15px; }
-        .btn { padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; background: var(--primary-red); color: #fff; }
-        .match-item { background: #0D1117; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; border: 1px solid var(--border-color); }
+        .card { background: var(--card-bg); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 20px; }
+        input { width: 100%; padding: 12px; background: #000; border: 1px solid var(--border-color); color: #fff; border-radius: 8px; margin-bottom: 10px; }
+        button { width: 100%; padding: 12px; background: var(--primary-red); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .match-list-item { background: #0D1117; padding: 12px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color); }
+        #admin-panel { display: none; }
     </style>
 </head>
 <body>
 
-    <div id="login-sec" class="card" style="max-width: 400px; margin: 100px auto;">
+    <div id="login-sec" class="card" style="max-width: 400px; margin: 100px auto; text-align: center;">
         <h2>Admin Login</h2><br>
-        <input type="email" id="email" placeholder="Email">
-        <input type="password" id="pass" placeholder="Password">
-        <button class="btn" onclick="login()">Login</button>
+        <input type="email" id="email" placeholder="ইমেইল">
+        <input type="password" id="pass" placeholder="পাসওয়ার্ড">
+        <button onclick="login()">প্রবেশ করুন</button>
     </div>
 
-    <div id="admin-sec" style="display:none;">
+    <div id="admin-panel">
         <div class="card">
-            <h3>Add New Match</h3><br>
-            <input type="text" id="m-title" placeholder="Match Title">
-            <input type="text" id="m-thumb" placeholder="Thumbnail URL">
-            <input type="text" id="m-url" placeholder="Video Embed URL">
-            <button class="btn" onclick="addMatch()">Publish Match</button>
+            <h3>নতুন ম্যাচ এড করুন</h3><br>
+            <input type="text" id="m-title" placeholder="ম্যাচ টাইটেল">
+            <input type="text" id="m-thumb" placeholder="থাম্বনেইল লিঙ্ক">
+            <input type="text" id="m-url" placeholder="ভিডিও লিঙ্ক (Embed)">
+            <button onclick="saveMatch()">পাবলিশ করুন</button>
         </div>
 
         <div class="card">
-            <h3>Manage Matches</h3><br>
-            <div id="admin-match-list"></div>
-        </div>
-
-        <div class="card">
-            <h3>App Settings</h3><br>
-            <label>Logo URL</label><input type="text" id="set-logo">
-            <button class="btn" onclick="saveSets()">Save Settings</button>
+            <h3>ম্যাচ লিস্ট</h3><br>
+            <div id="match-manage-list"></div>
         </div>
     </div>
 
@@ -64,34 +59,36 @@
             auth.signInWithEmailAndPassword(document.getElementById('email').value, document.getElementById('pass').value)
                 .then(() => {
                     document.getElementById('login-sec').style.display = 'none';
-                    document.getElementById('admin-sec').style.display = 'block';
-                    loadAdmin();
+                    document.getElementById('admin-panel').style.display = 'block';
+                    loadMatches();
                 }).catch(e => alert(e.message));
         }
 
-        function addMatch() {
+        function saveMatch() {
             const title = document.getElementById('m-title').value;
             const thumb = document.getElementById('m-thumb').value;
             const url = document.getElementById('m-url').value;
-            db.ref('matches').push({ title, thumbnail: thumb, videoUrl: url, watching: 0 });
-            alert("Match Added!");
+            if(title && url) {
+                db.ref('matches').push({ title, thumbnail: thumb, videoUrl: url, watching: 0 });
+                alert("Match Published!");
+                document.getElementById('m-title').value = '';
+                document.getElementById('m-thumb').value = '';
+                document.getElementById('m-url').value = '';
+            }
         }
 
-        function loadAdmin() {
+        function loadMatches() {
             db.ref('matches').on('value', snap => {
-                const list = document.getElementById('admin-match-list'); list.innerHTML = '';
+                const list = document.getElementById('match-manage-list'); list.innerHTML = '';
                 const data = snap.val();
                 for(let id in data) {
-                    list.innerHTML += `<div class="match-item">
+                    list.innerHTML += `<div class="match-list-item">
                         <span>${data[id].title} (👁️ ${data[id].watching || 0})</span>
-                        <button onclick="db.ref('matches/${id}').remove()" style="background:red; color:#fff; border:none; padding:5px; border-radius:5px; cursor:pointer;">Del</button>
+                        <button onclick="db.ref('matches/${id}').remove()" style="width: auto; padding: 5px 10px;">ডিলিট</button>
                     </div>`;
                 }
             });
-            db.ref('settings/logoUrl').on('value', s => document.getElementById('set-logo').value = s.val() || '');
         }
-
-        function saveSets() { db.ref('settings').update({ logoUrl: document.getElementById('set-logo').value }); }
     </script>
 </body>
 </html>
