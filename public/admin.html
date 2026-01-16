@@ -3,89 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Toto Stream - Pro Admin</title>
+    <title>Toto Admin - Pro Panel</title>
     <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
-        :root { --bg-color: #05070A; --drawer-bg: #0D1117; --card-bg: #161B22; --primary-red: #E21E26; --primary-yellow: #FFC107; --border-color: rgba(255,255,255,0.08); }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background-color: var(--bg-color); color: #fff; font-family: 'Hind Siliguri', sans-serif; height: 100vh; overflow: hidden; }
-        #login-page { position: fixed; inset: 0; background: var(--bg-color); z-index: 9999; display: flex; align-items: center; justify-content: center; }
-        .login-card { background: var(--card-bg); width: 350px; padding: 30px; border-radius: 20px; border: 1px solid var(--border-color); text-align: center; }
-        header { padding: 15px 20px; background: var(--drawer-bg); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; position: fixed; top: 0; width: 100%; z-index: 1000; }
-        .drawer { position: fixed; top: 0; left: -260px; width: 260px; height: 100%; background: var(--drawer-bg); border-right: 1px solid var(--border-color); z-index: 2000; transition: 0.4s; }
-        .drawer.open { left: 0; }
-        .drawer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1500; display: none; }
-        .drawer-overlay.active { display: block; }
-        .nav-item { padding: 15px 20px; cursor: pointer; color: #8B949E; }
-        .nav-item.active { background: rgba(226,30,38,0.1); color: var(--primary-red); border-left: 4px solid var(--primary-red); }
-        .main-container { padding: 80px 15px; height: 100vh; overflow-y: auto; }
-        .page-content { display: none; }
-        .page-content.active { display: block; }
-        .admin-card { background: var(--card-bg); border-radius: 15px; padding: 20px; border: 1px solid var(--border-color); margin-bottom: 20px; }
-        input { width: 100%; padding: 12px; background: #000; border: 1px solid var(--border-color); border-radius: 8px; color: #fff; margin-bottom: 10px; }
+        :root { --bg-color: #05070A; --card-bg: #161B22; --primary-red: #E21E26; --border-color: rgba(255,255,255,0.08); }
+        body { background: var(--bg-color); color: #fff; font-family: 'Hind Siliguri', sans-serif; padding: 20px; }
+        .card { background: var(--card-bg); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 20px; }
+        input { width: 100%; padding: 12px; background: #000; border: 1px solid var(--border-color); color: #fff; border-radius: 8px; margin-bottom: 10px; outline: none; }
         .btn { padding: 12px; background: var(--primary-red); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 10px; border-bottom: 1px solid var(--border-color); text-align: left; font-size: 14px; }
+        .m-list { margin-top: 20px; }
+        .m-item { display: flex; justify-content: space-between; padding: 10px; background: #0D1117; margin-bottom: 5px; border-radius: 8px; border: 1px solid var(--border-color); }
     </style>
 </head>
 <body>
 
-    <div id="login-page">
-        <div class="login-card">
-            <h2>Admin Login</h2><br>
-            <input type="email" id="email" placeholder="Email">
-            <input type="password" id="pass" placeholder="Password">
-            <button class="btn" onclick="login()">Login</button>
-        </div>
+    <div id="login-box" class="card" style="max-width:400px; margin: 50px auto;">
+        <h2>Admin Login</h2><br>
+        <input type="email" id="email" placeholder="Email">
+        <input type="password" id="pass" placeholder="Password">
+        <button class="btn" onclick="login()">প্রবেশ করুন</button>
     </div>
 
-    <div id="admin-ui" style="display:none;">
-        <div class="drawer-overlay" id="overlay" onclick="toggleMenu()"></div>
-        <div class="drawer" id="drawer">
-            <div style="padding:20px;"><h2>TOTO PRO</h2></div>
-            <div class="nav-item active" onclick="switchP('dash', this)">🏠 ড্যাশবোর্ড</div>
-            <div class="nav-item" onclick="switchP('matches', this)">🔴 লাইভ ম্যাচ</div>
-            <div class="nav-item" onclick="switchP('members', this)">👥 মেম্বার লিস্ট</div>
-            <div class="nav-item" onclick="switchP('settings', this)">⚙️ সেটিংস</div>
+    <div id="admin-panel" style="display:none;">
+        <div class="card">
+            <h3>নতুন ম্যাচ পাবলিশ করুন</h3><br>
+            <input type="text" id="m-title" placeholder="টাইটেল">
+            <input type="text" id="m-thumb" placeholder="থাম্বনেইল লিঙ্ক">
+            <input type="text" id="m-url" placeholder="ভিডিও এম্বেড লিঙ্ক">
+            <button class="btn" onclick="publish()">পাবলিশ</button>
         </div>
-        <header><div onclick="toggleMenu()" style="cursor:pointer">☰ মেনু</div><strong>অ্যাডমিন প্যানেল</strong></header>
 
-        <div class="main-container">
-            <div id="dash" class="page-content active">
-                <div class="admin-card">মোট মেম্বার: <h2 id="u-count">0</h2></div>
-            </div>
-
-            <div id="matches" class="page-content">
-                <div class="admin-card">
-                    <h3>ম্যাচ এড করুন</h3><br>
-                    <input type="text" id="m-title" placeholder="টাইটেল">
-                    <input type="text" id="m-thumb" placeholder="থাম্বনেইল">
-                    <input type="text" id="m-url" placeholder="ভিডিও লিঙ্ক">
-                    <button class="btn" onclick="addMatch()">পাবলিশ</button>
-                </div>
-                <h3>ম্যাচ লিস্ট</h3>
-                <div id="admin-match-list"></div>
-            </div>
-
-            <div id="members" class="page-content">
-                <div class="admin-card">
-                    <h3>মেম্বার কন্ট্রোল</h3>
-                    <table>
-                        <thead><tr><th>নাম</th><th>XP</th><th>অ্যাকশন</th></tr></thead>
-                        <tbody id="user-table"></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div id="settings" class="page-content">
-                <div class="admin-card">
-                    <label>লোগো URL</label><input type="text" id="set-logo">
-                    <button class="btn" onclick="db.ref('settings').update({logoUrl: document.getElementById('set-logo').value})">সেভ</button>
-                </div>
-            </div>
+        <div class="card">
+            <h3>এক্টিভ ম্যাচ লিস্ট</h3>
+            <div id="admin-matches" class="m-list"></div>
         </div>
     </div>
 
@@ -104,39 +57,34 @@
 
         function login() {
             auth.signInWithEmailAndPassword(document.getElementById('email').value, document.getElementById('pass').value)
-                .then(() => { document.getElementById('login-page').style.display='none'; document.getElementById('admin-ui').style.display='block'; initAdmin(); })
-                .catch(e => alert(e.message));
+                .then(() => {
+                    document.getElementById('login-box').style.display = 'none';
+                    document.getElementById('admin-panel').style.display = 'block';
+                    loadMatches();
+                }).catch(e => alert(e.message));
         }
 
-        function initAdmin() {
-            db.ref('users').on('value', s => {
-                const u = s.val(); document.getElementById('u-count').innerText = s.numChildren();
-                const tb = document.getElementById('user-table'); tb.innerHTML = '';
-                for(let id in u) tb.innerHTML += `<tr><td>${u[id].name}</td><td>${u[id].xp}</td><td><button onclick="db.ref('users/${id}').remove()">Del</button></td></tr>`;
-            });
-            db.ref('matches').on('value', s => {
-                const m = s.val(); const cont = document.getElementById('admin-match-list'); cont.innerHTML = '';
-                for(let id in m) cont.innerHTML += `<div class="admin-card" style="display:flex; justify-content:space-between;"><span>${m[id].title} (👁️ ${m[id].watching || 0})</span><button onclick="db.ref('matches/${id}').remove()">Del</button></div>`;
-            });
-            db.ref('settings/logoUrl').on('value', s => document.getElementById('set-logo').value = s.val() || '');
-        }
-
-        function addMatch() {
-            db.ref('matches').push({
+        function publish() {
+            const m = {
                 title: document.getElementById('m-title').value,
                 thumbnail: document.getElementById('m-thumb').value,
                 videoUrl: document.getElementById('m-url').value,
                 watching: 0
-            });
-            alert("Added!");
+            };
+            db.ref('matches').push(m).then(() => alert("ম্যাচ সফলভাবে পাবলিশ হয়েছে!"));
         }
 
-        function toggleMenu() { document.getElementById('drawer').classList.toggle('open'); document.getElementById('overlay').classList.toggle('active'); }
-        function switchP(p, el) {
-            document.querySelectorAll('.page-content').forEach(c=>c.classList.remove('active'));
-            document.getElementById(p).classList.add('active');
-            document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-            el.classList.add('active'); toggleMenu();
+        function loadMatches() {
+            db.ref('matches').on('value', snap => {
+                const list = document.getElementById('admin-matches'); list.innerHTML = '';
+                const data = snap.val();
+                for(let id in data) {
+                    list.innerHTML += `<div class="m-item">
+                        <span>${data[id].title} (👁️ ${data[id].watching || 0})</span>
+                        <button onclick="db.ref('matches/${id}').remove()" style="background:red; color:#fff; border:none; padding:3px 8px; border-radius:5px; cursor:pointer;">Del</button>
+                    </div>`;
+                }
+            });
         }
     </script>
 </body>
