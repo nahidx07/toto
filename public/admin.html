@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toto Admin Panel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        :root { --bg-color: #05070A; --drawer-bg: #0D1117; --card-bg: #161B22; --primary-red: #E21E26; --primary-yellow: #FFC107; --border-color: rgba(255,255,255,0.08); }
+        body { background: var(--bg-color); color: #fff; font-family: 'Hind Siliguri', sans-serif; padding: 20px; }
+        .card { background: var(--card-bg); padding: 25px; border-radius: 15px; border: 1px solid var(--border-color); margin-bottom: 20px; }
+        input { width: 100%; padding: 12px; background: #000; border: 1px solid var(--border-color); color: #fff; border-radius: 8px; margin-bottom: 15px; }
+        .btn { padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; background: var(--primary-red); color: #fff; }
+        .match-item { background: #0D1117; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; border: 1px solid var(--border-color); }
+    </style>
+</head>
+<body>
+
+    <div id="login-sec" class="card" style="max-width: 400px; margin: 100px auto;">
+        <h2>Admin Login</h2><br>
+        <input type="email" id="email" placeholder="Email">
+        <input type="password" id="pass" placeholder="Password">
+        <button class="btn" onclick="login()">Login</button>
+    </div>
+
+    <div id="admin-sec" style="display:none;">
+        <div class="card">
+            <h3>Add New Match</h3><br>
+            <input type="text" id="m-title" placeholder="Match Title">
+            <input type="text" id="m-thumb" placeholder="Thumbnail URL">
+            <input type="text" id="m-url" placeholder="Video Embed URL">
+            <button class="btn" onclick="addMatch()">Publish Match</button>
+        </div>
+
+        <div class="card">
+            <h3>Manage Matches</h3><br>
+            <div id="admin-match-list"></div>
+        </div>
+
+        <div class="card">
+            <h3>App Settings</h3><br>
+            <label>Logo URL</label><input type="text" id="set-logo">
+            <button class="btn" onclick="saveSets()">Save Settings</button>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAmdXx4PAETjr42lpSbTR6sb5H0WqUyzoo",
+            authDomain: "totolive-6689f.firebaseapp.com",
+            databaseURL: "https://totolive-6689f-default-rtdb.firebaseio.com",
+            projectId: "totolive-6689f",
+            storageBucket: "totolive-6689f.firebasestorage.app",
+            messagingSenderId: "423841122771",
+            appId: "1:423841122771:web:ad3c529d8dc9833a69c726"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth(); const db = firebase.database();
+
+        function login() {
+            auth.signInWithEmailAndPassword(document.getElementById('email').value, document.getElementById('pass').value)
+                .then(() => {
+                    document.getElementById('login-sec').style.display = 'none';
+                    document.getElementById('admin-sec').style.display = 'block';
+                    loadAdmin();
+                }).catch(e => alert(e.message));
+        }
+
+        function addMatch() {
+            const title = document.getElementById('m-title').value;
+            const thumb = document.getElementById('m-thumb').value;
+            const url = document.getElementById('m-url').value;
+            db.ref('matches').push({ title, thumbnail: thumb, videoUrl: url, watching: 0 });
+            alert("Match Added!");
+        }
+
+        function loadAdmin() {
+            db.ref('matches').on('value', snap => {
+                const list = document.getElementById('admin-match-list'); list.innerHTML = '';
+                const data = snap.val();
+                for(let id in data) {
+                    list.innerHTML += `<div class="match-item">
+                        <span>${data[id].title} (👁️ ${data[id].watching || 0})</span>
+                        <button onclick="db.ref('matches/${id}').remove()" style="background:red; color:#fff; border:none; padding:5px; border-radius:5px; cursor:pointer;">Del</button>
+                    </div>`;
+                }
+            });
+            db.ref('settings/logoUrl').on('value', s => document.getElementById('set-logo').value = s.val() || '');
+        }
+
+        function saveSets() { db.ref('settings').update({ logoUrl: document.getElementById('set-logo').value }); }
+    </script>
+</body>
+</html>
