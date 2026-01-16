@@ -4,109 +4,77 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Toto Stream - Telegram Mini App</title>
-    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Telegram WebApp SDK -->
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-
     <style>
-        :root {
-            --bg-color: #05070A; --primary-yellow: #FFC107; --primary-red: #E21E26;
-            --nav-bg: #121418; --chat-bg: #161A1E; --input-bg: #2B2F36;
-            --border-color: rgba(255,255,255,0.08); --icon-gray: #8B949E;
-        }
-
+        :root { --bg-color: #05070A; --primary-yellow: #FFC107; --primary-red: #E21E26; --chat-bg: #161A1E; --border-color: rgba(255,255,255,0.08); }
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         body { background-color: var(--bg-color); color: #fff; font-family: 'Hind Siliguri', sans-serif; overflow: hidden; height: 100vh; }
-
-        header.main-header { padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; background: rgba(5, 7, 10, 0.95); backdrop-filter: blur(15px); border-bottom: 1px solid var(--border-color); position: fixed; top: 0; width: 100%; z-index: 1000; }
-        .logo { height: 40px; }
-        .xp-badge-top { background: rgba(76, 175, 80, 0.1); border: 1px solid rgba(76, 175, 80, 0.3); padding: 5px 12px; border-radius: 50px; color: #4CAF50; font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 5px; }
-
+        header { padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); background: rgba(5,7,10,0.9); position: fixed; width: 100%; top: 0; z-index: 1000; }
+        .logo { height: 35px; }
         .page-content { display: none; padding: 75px 15px 120px; height: 100vh; overflow-y: auto; }
-        .page-content.active { display: block; }
-
+        .active { display: block; }
         .match-card { background: #161B22; border-radius: 15px; overflow: hidden; border: 1px solid var(--border-color); margin-bottom: 20px; cursor: pointer; }
         .match-thumb { width: 100%; aspect-ratio: 16/9; background-size: cover; background-position: center; position: relative; }
-        .match-thumb::after { content: '▶'; font-size: 40px; color: white; background: rgba(0,0,0,0.4); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
-
-        #live-view { display: none; position: fixed; inset: 0; background: #0B0E11; z-index: 5000; flex-direction: column; }
-        .live-header { width: 100%; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; background: #161A1E; }
-        .video-wrapper { width: 100%; aspect-ratio: 16/9; background: #000; }
-        
+        .match-thumb::after { content: '▶'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 40px; color: white; background: rgba(0,0,0,0.4); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        #live-view { display: none; position: fixed; inset: 0; background: #000; z-index: 5000; flex-direction: column; }
         .chat-container { flex: 1; display: flex; flex-direction: column; background: var(--chat-bg); overflow: hidden; }
-        #chat-messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
-        
-        /* চ্যাট মেসেজ স্টাইল (প্রোফাইল পিকচার সহ) */
-        .chat-msg { display: flex; gap: 10px; align-items: flex-start; }
-        .chat-avatar { width: 35px; height: 35px; border-radius: 50%; border: 1px solid var(--primary-red); }
-        .chat-text { background: rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 12px; font-size: 14px; flex: 1; }
-        .chat-text b { color: var(--primary-yellow); font-size: 12px; display: block; margin-bottom: 2px; }
-
-        .chat-input-box { display: flex; padding: 10px; background: #121418; gap: 10px; border-top: 1px solid var(--border-color); }
-        .chat-input-box input { flex: 1; background: var(--input-bg); border: none; padding: 12px; border-radius: 10px; color: #fff; outline: none; }
-        .chat-send-btn { background: var(--primary-red); border: none; color: #fff; padding: 0 15px; border-radius: 10px; font-weight: bold; }
-
-        .nav-island { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 400px; height: 70px; background: rgba(18, 20, 24, 0.85); backdrop-filter: blur(15px); border-radius: 24px; display: flex; justify-content: space-around; align-items: center; border: 1px solid rgba(255, 255, 255, 0.1); z-index: 1000; }
-        .nav-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; color: var(--icon-gray); flex: 1; font-size: 12px; }
-        .nav-btn.active { color: var(--primary-red); }
+        #chat-messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .chat-msg { display: flex; gap: 10px; }
+        .chat-avatar { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--primary-red); }
+        .chat-text { background: rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 10px; font-size: 13px; }
+        .chat-text b { color: var(--primary-yellow); font-size: 11px; display: block; }
+        .nav-island { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: 90%; height: 70px; background: rgba(18, 24, 30, 0.9); backdrop-filter: blur(10px); border-radius: 20px; display: flex; justify-content: space-around; align-items: center; border: 1px solid var(--border-color); z-index: 1000; }
+        .nav-btn { color: #8B949E; cursor: pointer; text-align: center; font-size: 12px; }
+        .nav-btn.active-nav { color: var(--primary-red); }
     </style>
 </head>
 <body>
 
-    <header class="main-header">
+    <header>
         <img id="app-logo" src="" class="logo">
-        <div class="xp-badge-top">⚡ <span id="xp-display">0</span> XP</div>
+        <div style="color: #4CAF50; font-weight: bold;">⚡ <span id="user-xp">0</span> XP</div>
     </header>
 
-    <!-- হোম পেজ -->
     <div id="home" class="page-content active">
-        <h3 style="margin-bottom: 15px;">সরাসরি সম্প্রচার</h3>
-        <div id="matches-container">লোড হচ্ছে...</div>
+        <h3 style="margin-bottom: 15px;">সরাসরি ম্যাচ</h3>
+        <div id="matches-list">লোড হচ্ছে...</div>
     </div>
 
-    <!-- লিডারবোর্ড -->
     <div id="top" class="page-content">
         <h3 style="margin-bottom: 15px;">লিডারবোর্ড</h3>
-        <div id="leaderboard-data"></div>
+        <div id="leaderboard"></div>
     </div>
 
-    <!-- প্রোফাইল পেজ -->
     <div id="profile" class="page-content">
-        <div style="background: #161B22; border-radius: 20px; padding: 30px; text-align: center; border: 1px solid var(--border-color);">
-            <img id="p-pic" src="" style="width: 100px; height: 100px; border-radius: 50%; border: 3px solid var(--primary-red); object-fit: cover;">
-            <h2 id="p-name" style="margin-top: 15px;">-</h2>
-            <p id="p-id" style="color: gray; font-size: 12px; margin-top: 5px;"></p>
-            <div style="margin-top: 20px; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 12px; text-align: center;">
-                <span style="font-size: 12px; color: #4CAF50;">টেলিগ্রাম বটের মাধ্যমে অটো-লগইন সম্পন্ন হয়েছে</span>
-            </div>
+        <div style="background:#161B22; padding:30px; border-radius:20px; text-align:center; border:1px solid var(--border-color);">
+            <img id="p-pic" src="" style="width:100px; height:100px; border-radius:50%; border:3px solid var(--primary-red);">
+            <h2 id="p-name" style="margin-top:10px;">-</h2>
+            <p id="p-id" style="color:gray; font-size:12px;"></p>
         </div>
     </div>
 
-    <!-- লাইভ ভিউ স্ক্রিন -->
     <div id="live-view">
-        <div class="live-header">
+        <div style="padding:15px; background:#161B22; display:flex; justify-content:space-between; align-items:center;">
             <span onclick="closeLive()" style="cursor:pointer; font-weight:bold;">✕ বন্ধ করুন</span>
-            <div style="color:red; font-size:12px; font-weight:bold;">● <span id="watch-count">0</span> watching</div>
+            <div style="color:red; font-size:12px; font-weight:bold;">● <span id="watching-now">0</span> watching</div>
         </div>
-        <div class="video-wrapper" id="video-container"></div>
+        <div id="video-box" style="width:100%; aspect-ratio:16/9;"></div>
         <div class="chat-container">
             <div id="chat-messages"></div>
-            <div class="chat-input-box">
-                <input type="text" id="chat-input" placeholder="মতামত লিখুন...">
-                <button class="chat-send-btn" onclick="sendChat()">পাঠান</button>
+            <div style="padding:10px; display:flex; gap:10px; background:#0D1117;">
+                <input type="text" id="chat-inp" placeholder="কমেন্ট লিখুন..." style="flex:1; padding:10px; border-radius:8px; border:none; background:#2B2F36; color:#fff;">
+                <button onclick="sendComment()" style="background:var(--primary-red); color:#fff; border:none; padding:0 15px; border-radius:8px; font-weight:bold;">Send</button>
             </div>
         </div>
     </div>
 
-    <!-- নেভিগেশন -->
     <nav class="nav-island">
-        <div class="nav-btn active" onclick="showPage('home', this)"><span>🏠 হোম</span></div>
-        <div class="nav-btn" onclick="showPage('top', this)"><span>🏆 লিডারবোর্ড</span></div>
-        <div class="nav-btn" onclick="showPage('profile', this)"><span>👤 একাউন্ট</span></div>
+        <div class="nav-btn active-nav" onclick="showP('home', this)"><div>🏠</div>হোম</div>
+        <div class="nav-btn" onclick="showP('top', this)"><div>🏆</div>লিডারবোর্ড</div>
+        <div class="nav-btn" onclick="showP('profile', this)"><div>👤</div>একাউন্ট</div>
     </nav>
 
     <script>
@@ -122,120 +90,83 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // টেলিগ্রাম SDK থেকে ইউজার ডাটা নেওয়া
-        const tg = window.Telegram.WebApp;
-        tg.expand();
-        const tgUser = tg.initDataUnsafe.user;
+        const tg = window.Telegram.WebApp; tg.expand();
+        const user = tg.initDataUnsafe.user;
+        let myId = user ? user.id : "guest_101";
+        let myName = user ? (user.first_name + " " + (user.last_name || "")) : "Guest User";
+        let myPic = user && user.photo_url ? user.photo_url : "https://www.w3schools.com/howto/img_avatar.png";
 
-        // ডিফল্ট ডাটা যদি টেলিগ্রাম থেকে না পাওয়া যায় (ব্রাউজারে টেস্টের জন্য)
-        let myId = tgUser ? tgUser.id : "guest_123";
-        let myName = tgUser ? (tgUser.first_name + (tgUser.last_name ? " " + tgUser.last_name : "")) : "Guest User";
-        let myPic = tgUser && tgUser.photo_url ? tgUser.photo_url : "https://www.w3schools.com/howto/img_avatar.png";
-
-        // ১. অটোমেটিক একাউন্ট ক্রিয়েশন/আপডেট
-        db.ref('users/' + myId).once('value', snap => {
-            if(!snap.val()) {
-                db.ref('users/' + myId).set({ name: myName, profilePic: myPic, xp: 500, id: myId });
-            } else {
-                db.ref('users/' + myId).update({ name: myName, profilePic: myPic });
-            }
+        // ১. অটো লগইন
+        db.ref('users/' + myId).once('value', s => {
+            if(!s.val()) db.ref('users/' + myId).set({ name: myName, profilePic: myPic, xp: 500, id: myId });
+            else db.ref('users/' + myId).update({ name: myName, profilePic: myPic });
         });
 
-        // প্রোফাইল সিঙ্ক
         db.ref('users/' + myId).on('value', s => {
-            const u = s.val(); if(!u) return;
-            document.getElementById('p-name').innerText = u.name;
-            document.getElementById('p-pic').src = u.profilePic;
+            const d = s.val(); if(!d) return;
+            document.getElementById('p-name').innerText = d.name;
+            document.getElementById('p-pic').src = d.profilePic;
             document.getElementById('p-id').innerText = "TG ID: " + myId;
-            document.getElementById('xp-display').innerText = (u.xp || 0).toLocaleString();
+            document.getElementById('user-xp').innerText = d.xp;
         });
 
-        // ২. লাইভ ম্যাচ লিস্ট ও রিয়েল টাইম ওয়াচিং
-        db.ref('matches').on('value', snap => {
-            const matches = snap.val(); const cont = document.getElementById('matches-container'); cont.innerHTML = '';
-            if(!matches) { cont.innerHTML = "বর্তমানে কোনো ম্যাচ নেই।"; return; }
+        // ২. ম্যাচ লোড
+        db.ref('matches').on('value', s => {
+            const matches = s.val(); const cont = document.getElementById('matches-list'); cont.innerHTML = '';
             for(let id in matches) {
-                const m = matches[id];
-                cont.innerHTML += `<div class="match-card" onclick="openLive('${id}', '${m.videoUrl}')">
-                    <div class="match-thumb" style="background-image:url('${m.thumbnail}')"></div>
+                cont.innerHTML += `<div class="match-card" onclick="openLive('${id}', '${matches[id].videoUrl}')">
+                    <div class="match-thumb" style="background-image:url('${matches[id].thumbnail}')"></div>
                     <div style="padding:12px; display:flex; justify-content:space-between;">
-                        <b>${m.title}</b><span style="color:red; font-size:12px;">👁️ ${m.watching || 0}</span>
+                        <b>${matches[id].title}</b><span style="color:red">👁️ ${matches[id].watching || 0}</span>
                     </div>
                 </div>`;
             }
         });
 
-        let currentMatchId = null;
-        function openLive(matchId, url) {
-            currentMatchId = matchId;
+        let curMid = null;
+        function openLive(id, url) {
+            curMid = id;
             document.getElementById('live-view').style.display = 'flex';
-            document.getElementById('video-container').innerHTML = `<iframe width="100%" height="100%" src="${url}" frameborder="0" allowfullscreen></iframe>`;
+            document.getElementById('video-box').innerHTML = `<iframe width="100%" height="100%" src="${url}" frameborder="0" allowfullscreen></iframe>`;
             
-            // ওয়াচিং কাউন্ট বাড়ানো (Transaction ব্যবহার করে)
-            db.ref('matches/' + matchId + '/watching').transaction(curr => (curr || 0) + 1);
-            db.ref('matches/' + matchId + '/watching').onDisconnect().transaction(curr => (curr || 0) - 1);
-            db.ref('matches/' + matchId + '/watching').on('value', s => document.getElementById('watch-count').innerText = s.val() || 0);
+            // ওয়াচিং ফিক্স
+            db.ref('matches/'+id+'/watching').transaction(c => (c || 0) + 1);
+            db.ref('matches/'+id+'/watching').onDisconnect().transaction(c => (c || 0) - 1);
+            db.ref('matches/'+id+'/watching').on('value', s => document.getElementById('watching-now').innerText = s.val() || 0);
 
-            // চ্যাট লোড করা
-            loadChats(matchId);
-        }
-
-        function loadChats(mid) {
-            db.ref('matches/' + mid + '/chats').limitToLast(25).on('value', snap => {
-                const chats = snap.val(); const box = document.getElementById('chat-messages'); box.innerHTML = '';
-                for(let id in chats) {
-                    const c = chats[id];
-                    box.innerHTML += `
-                        <div class="chat-msg">
-                            <img src="${c.pic}" class="chat-avatar">
-                            <div class="chat-text"><b>${c.name}</b>${c.msg}</div>
-                        </div>`;
+            // চ্যাট ফিক্স
+            db.ref('matches/'+id+'/chats').on('value', s => {
+                const chats = s.val(); const box = document.getElementById('chat-messages'); box.innerHTML = '';
+                for(let cid in chats) {
+                    box.innerHTML += `<div class="chat-msg">
+                        <img src="${chats[cid].pic}" class="chat-avatar">
+                        <div class="chat-text"><b>${chats[cid].name}</b>${chats[cid].msg}</div>
+                    </div>`;
                 }
                 box.scrollTop = box.scrollHeight;
             });
         }
 
-        function sendChat() {
-            const input = document.getElementById('chat-input');
-            if(!input.value || !currentMatchId) return;
-            db.ref('matches/' + currentMatchId + '/chats').push({
-                name: myName,
-                pic: myPic,
-                msg: input.value,
-                time: Date.now()
-            });
-            input.value = '';
+        function sendComment() {
+            const inp = document.getElementById('chat-inp'); if(!inp.value || !curMid) return;
+            db.ref('matches/'+curMid+'/chats').push({ name: myName, pic: myPic, msg: inp.value });
+            inp.value = '';
         }
 
         function closeLive() {
-            if(currentMatchId) {
-                db.ref('matches/' + currentMatchId + '/watching').transaction(curr => (curr || 0) - 1);
-                db.ref('matches/' + currentMatchId + '/chats').off();
-            }
+            if(curMid) db.ref('matches/'+curMid+'/watching').transaction(c => (c || 0) - 1);
             document.getElementById('live-view').style.display = 'none';
-            document.getElementById('video-container').innerHTML = '';
-            currentMatchId = null;
+            document.getElementById('video-box').innerHTML = ''; curMid = null;
         }
 
-        function showPage(id, el) {
-            document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active'));
+        function showP(id, el) {
+            document.querySelectorAll('.page-content').forEach(p=>p.classList.remove('active'));
             document.getElementById(id).classList.add('active');
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            el.classList.add('active');
+            document.querySelectorAll('.nav-btn').forEach(n=>n.classList.remove('active-nav'));
+            el.classList.add('active-nav');
         }
 
         db.ref('settings/logoUrl').on('value', s => document.getElementById('app-logo').src = s.val());
-
-        // লিডারবোর্ড
-        db.ref('users').orderByChild('xp').limitToLast(10).on('value', snap => {
-            const users = snap.val(); const lb = document.getElementById('leaderboard-data'); lb.innerHTML = '';
-            let arr = []; for(let id in users) arr.push(users[id]);
-            arr.sort((a,b)=>b.xp - a.xp).forEach((u, i) => {
-                lb.innerHTML += `<div style="display:flex;justify-content:space-between;background:#161B22;padding:12px;margin-bottom:8px;border-radius:12px;border:1px solid var(--border-color)">
-                    <span>#${i+1} ${u.name}</span><span style="color:var(--primary-yellow)">${u.xp} XP</span>
-                </div>`;
-            });
-        });
     </script>
 </body>
 </html>
