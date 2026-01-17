@@ -78,7 +78,7 @@
             <div id="chat-msgs"></div>
         </div>
         <div class="chat-input">
-            <div class="inp-wrap"><input type="text" id="c-inp" placeholder="Add a comment..."></div>
+            <div class="inp-wrap"><input type="text" id="c-inp" placeholder="Add a comment..." onkeypress="handleChatKeyPress(event)"></div>
             <button class="send-btn" onclick="sendMsg()"><svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
         </div>
     </div>
@@ -99,38 +99,87 @@
             messagingSenderId: "423841122771",
             appId: "1:423841122771:web:ad3c529d8dc9833a69c726"
         };
+        
+        // Firebase initialization
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        const tg = window.Telegram.WebApp; tg.expand();
-        const u = tg.initDataUnsafe.user;
-        let myId = u ? u.id : "guest_" + Math.floor(Math.random()*999);
-        let myName = u ? (u.first_name + " " + (u.last_name || "")) : "Guest User";
-        let myPic = u && u.photo_url ? u.photo_url : "https://www.w3schools.com/howto/img_avatar.png";
+        // Telegram Web App initialization
+        let tg, u, myId, myName, myPic;
+        
+        try {
+            tg = window.Telegram?.WebApp;
+            if (tg) {
+                tg.expand();
+                u = tg.initDataUnsafe?.user;
+            }
+        } catch (e) {
+            console.log("Telegram Web App not available:", e);
+        }
 
-        // Auto Login
+        // User initialization
+        if (u && u.id) {
+            myId = u.id.toString();
+            myName = (u.first_name || "") + (u.last_name ? " " + u.last_name : "");
+            myPic = u.photo_url || "https://www.w3schools.com/howto/img_avatar.png";
+        } else {
+            // Fallback for non-Telegram or guest users
+            myId = "guest_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
+            myName = "Guest User";
+            myPic = "https://www.w3schools.com/howto/img_avatar.png";
+        }
+
+        // Auto Login/Register user
         db.ref('users/' + myId).once('value', s => {
-            if(!s.val()) db.ref('users/' + myId).set({ name: myName, profilePic: myPic, xp: 500, id: myId });
-            else db.ref('users/' + myId).update({ name: myName, profilePic: myPic });
-        });
-
-        db.ref('users/' + myId).on('value', s => {
-            const d = s.val(); if(!d) return;
-            document.getElementById('p-name').innerText = d.name;
-            document.getElementById('p-img').src = d.profilePic;
-            document.getElementById('p-id').innerText = "TG ID: " + myId;
-            document.getElementById('u-xp').innerText = (d.xp || 0).toLocaleString();
-        });
-
-        db.ref('settings').on('value', s => {
-            if(s.val()) {
-                document.getElementById('u-logo').src = s.val().logoUrl;
-                document.getElementById('s-logo').src = s.val().logoUrl;
+            if(!s.val()) {
+                db.ref('users/' + myId).set({ 
+                    name: myName, 
+                    profilePic: myPic, 
+                    xp: 500, 
+                    id: myId,
+                    createdAt: firebase.database.ServerValue.TIMESTAMP
+                });
+            } else {
+                db.ref('users/' + myId).update({ 
+                    name: myName, 
+                    profilePic: myPic,
+                    lastSeen: firebase.database.ServerValue.TIMESTAMP
+                });
             }
         });
 
+        // Listen to user data updates
+        db.ref('users/' + myId).on('value', s => {
+            const d = s.val(); 
+            if(!d) return;
+            document.getElementById('p-name').innerText = d.name;
+            document.getElementById('p-img').src = d.profilePic;
+            document.getElementById('p-id').innerText = "ID: " + myId;
+            document.getElementById('u-xp').innerText = (d.xp || 0).toLocaleString();
+        });
+
+        // Load settings
+        db.ref('settings').on('value', s => {
+            if(s.val()) {
+                const logoUrl = s.val().logoUrl;
+                if (logoUrl) {
+                    document.getElementById('u-logo').src = logoUrl;
+                    document.getElementById('s-logo').src = logoUrl;
+                }
+            }
+        });
+
+        // Load matches
         db.ref('matches').on('value', snap => {
-            const m = snap.val(); const cont = document.getElementById('m-cont'); cont.innerHTML = '';
+            const m = snap.val(); 
+            const cont = document.getElementById('m-cont'); 
+            cont.innerHTML = '';
+            
+            if (!m) {
+                cont.innerHTML = '<p style="text-align:center; color:#888;">কোন লাইভ ম্যাচ নেই</p>';
+                return;
+            }
+            
             for(let id in m) {
                 cont.innerHTML += `<div class="match-card" onclick="openLive('${id}', '${m[id].videoUrl}')">
                     <div class="match-thumb" style="background-image:url('${m[id].thumbnail}')"></div>
@@ -140,50 +189,204 @@
         });
 
         let curMid = null;
+        let watchingRef = null;
+        let chatsRef = null;
+
         function openLive(id, url) {
             curMid = id;
-            document.getElementById('live-view').style.display = 'flex';
-            document.getElementById('vid-box').innerHTML = `<iframe width="100%" height="100%" src="${url}" frameborder="0" allowfullscreen></iframe>`;
+            const liveView = document.getElementById('live-view');
+            liveView.style.display = 'flex';
             
-            db.ref('matches/'+id+'/watching').transaction(c => (c || 0) + 1);
-            db.ref('matches/'+id+'/watching').onDisconnect().transaction(c => (c || 0) - 1);
-            db.ref('matches/'+id+'/watching').on('value', s => document.getElementById('w-count').innerText = (s.val() || 0));
-
-            db.ref('matches/'+id+'/chats').on('value', s => {
-                const chats = s.val(); const box = document.getElementById('chat-msgs'); box.innerHTML = '';
-                for(let cid in chats) box.innerHTML += `<div class="msg"><b>${chats[cid].name}:</b> ${chats[cid].msg}</div>`;
+            // Load video
+            document.getElementById('vid-box').innerHTML = `
+                <iframe 
+                    width="100%" 
+                    height="100%" 
+                    src="${url}" 
+                    frameborder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                    allowfullscreen>
+                </iframe>`;
+            
+            // Update watching count
+            if (watchingRef) {
+                watchingRef.off(); // Remove previous listener
+            }
+            
+            watchingRef = db.ref('matches/' + id + '/watching');
+            
+            // Increment watching count
+            watchingRef.transaction(current => {
+                return (current || 0) + 1;
+            });
+            
+            // Set up disconnect handler
+            watchingRef.onDisconnect().transaction(current => {
+                return (current || 0) - 1;
+            });
+            
+            // Listen to watching count updates
+            watchingRef.on('value', s => {
+                const count = s.val() || 0;
+                document.getElementById('w-count').innerText = count;
+            });
+            
+            // Load and listen to chats
+            if (chatsRef) {
+                chatsRef.off(); // Remove previous listener
+            }
+            
+            chatsRef = db.ref('matches/' + id + '/chats');
+            chatsRef.on('value', s => {
+                const chats = s.val(); 
+                const box = document.getElementById('chat-msgs'); 
+                box.innerHTML = '';
+                
+                if (!chats) {
+                    box.innerHTML = '<p style="text-align:center; color:#888; padding:20px;">চ্যাট শুরু করুন!</p>';
+                    return;
+                }
+                
+                // Convert to array and sort by timestamp if available
+                const chatArray = [];
+                for(let cid in chats) {
+                    chatArray.push({
+                        id: cid,
+                        ...chats[cid]
+                    });
+                }
+                
+                // Sort by timestamp if available, otherwise by key
+                chatArray.sort((a, b) => {
+                    if (a.timestamp && b.timestamp) {
+                        return a.timestamp - b.timestamp;
+                    }
+                    return 0;
+                });
+                
+                // Display chats
+                chatArray.forEach(chat => {
+                    box.innerHTML += `<div class="msg">
+                        <b>${chat.name || 'Anonymous'}:</b> ${chat.msg}
+                    </div>`;
+                });
+                
+                // Scroll to bottom
                 box.scrollTop = box.scrollHeight;
             });
+            
+            // Focus on chat input
+            setTimeout(() => {
+                document.getElementById('c-inp').focus();
+            }, 500);
         }
 
         function sendMsg() {
-            const inp = document.getElementById('chat-inp'); 
-            if(!inp.value.trim() || !curMid) return;
-            db.ref('matches/'+curMid+'/chats').push({ name: myName, msg: inp.value });
-            inp.value = '';
+            const inp = document.getElementById('c-inp');
+            const msg = inp.value.trim();
+            
+            if(!msg || !curMid) {
+                alert('দয়া করে একটি মেসেজ লিখুন');
+                return;
+            }
+            
+            // Add chat message with timestamp
+            db.ref('matches/' + curMid + '/chats').push({ 
+                name: myName, 
+                msg: msg,
+                userId: myId,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            }).then(() => {
+                inp.value = ''; // Clear input
+                inp.focus(); // Refocus
+            }).catch(error => {
+                console.error("Error sending message:", error);
+                alert('মেসেজ পাঠানো যায়নি। আবার চেষ্টা করুন।');
+            });
+        }
+
+        function handleChatKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMsg();
+            }
         }
 
         function closeLive() {
-            if(curMid) db.ref('matches/'+curMid+'/watching').transaction(c => (c || 0) - 1);
+            // Decrement watching count
+            if (curMid && watchingRef) {
+                watchingRef.transaction(current => {
+                    return Math.max(0, (current || 0) - 1);
+                });
+                watchingRef.off();
+            }
+            
+            // Remove chat listener
+            if (chatsRef) {
+                chatsRef.off();
+            }
+            
+            // Reset
             document.getElementById('live-view').style.display = 'none';
-            document.getElementById('vid-box').innerHTML = ''; curMid = null;
+            document.getElementById('vid-box').innerHTML = '';
+            document.getElementById('c-inp').value = '';
+            curMid = null;
+            watchingRef = null;
+            chatsRef = null;
         }
 
         function showP(id, el) {
-            document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+            // Close live view if open
+            if (document.getElementById('live-view').style.display === 'flex') {
+                closeLive();
+            }
+            
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.getElementById(id).classList.add('active');
-            document.querySelectorAll('.n-btn').forEach(n=>n.classList.remove('active'));
+            document.querySelectorAll('.n-btn').forEach(n => n.classList.remove('active'));
             el.classList.add('active');
         }
 
+        // Load leaderboard
         db.ref('users').orderByChild('xp').limitToLast(10).on('value', s => {
-            const users = s.val(); const lb = document.getElementById('lb-cont'); lb.innerHTML = '';
-            let arr = []; for(let id in users) arr.push(users[id]);
-            arr.sort((a,b)=>b.xp - a.xp).forEach((u, i) => {
+            const users = s.val(); 
+            const lb = document.getElementById('lb-cont'); 
+            lb.innerHTML = '';
+            
+            if (!users) {
+                lb.innerHTML = '<p style="text-align:center; color:#888;">কোন ডাটা নেই</p>';
+                return;
+            }
+            
+            let arr = []; 
+            for(let id in users) {
+                if (users[id]) {
+                    arr.push(users[id]);
+                }
+            }
+            
+            arr.sort((a,b) => (b.xp || 0) - (a.xp || 0));
+            
+            arr.forEach((u, i) => {
                 lb.innerHTML += `<div style="display:flex; justify-content:space-between; background:var(--card); padding:15px; margin-bottom:10px; border-radius:12px; border:1px solid var(--border)">
-                    <span>#${i+1} ${u.name}</span><span style="color:orange">${u.xp} XP</span>
+                    <span>#${i+1} ${u.name || 'Unknown'}</span>
+                    <span style="color:orange">${(u.xp || 0).toLocaleString()} XP</span>
                 </div>`;
             });
+        });
+
+        // Handle page visibility change
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden && curMid && watchingRef) {
+                // User switched tabs/apps, decrement count temporarily
+                watchingRef.transaction(current => {
+                    return Math.max(0, (current || 0) - 1);
+                });
+            }
+        });
+        
+        // Handle beforeunload
+        window.addEventListener('beforeunload', function() {
+            closeLive();
         });
     </script>
 </body>
